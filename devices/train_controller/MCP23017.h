@@ -1,3 +1,5 @@
+
+
 #ifndef MCP23017_H_
 #define MCP23017_H_
 
@@ -38,66 +40,80 @@
  * Registers used in the MCP23017
  */
 typedef enum MCP23017Register {
-  IODIRA = 0x00, // Direction of pins on GPIO bank A  0=output, 1=input
-  IODIRB = 0x01, // Direction of pins on GPIO bank B  0=output, 1=input
-IPOLA =   0x02,
-IPOLB   = 0x03,
-GPINTENA= 0x04,
-GPINTENB =0x05,
-DEFVALA  =0x06,
-DEFVALB  =0x07,
-INTCONA  =0x08,
-INTCONB  =0x09,
-IOCONA   =0x0A,
-IOCONB   =0x0B,
-GPPUA    =0x0C, // Pull-up resistor on pins in GPIO bank A. 0=disabled. 1=enabled.
-GPPUB   = 0x0D,  // Pull-up resistor on pins in GPIO bank B. 0=disabled. 1=enabled.
-INTFA    =0x0E,
-INTFB    =0x0F,
-INTCAPA  =0x10,
-INTCAPB  =0x11,
- GPIOA  =  0x12,
-GPIOB   = 0x13,
- OLATA  =  0x14,
- OLATB  =  0x15
+  IODIRA   = 0x00, // Direction of pins on GPIO bank A  0=output, 1=input
+  IODIRB   = 0x01, // Direction of pins on GPIO bank B  0=output, 1=input
+  IPOLA    = 0x02,
+  IPOLB    = 0x03,
+  GPINTENA = 0x04,
+  GPINTENB = 0x05,
+  DEFVALA  = 0x06,
+  DEFVALB  = 0x07,
+  INTCONA  = 0x08,
+  INTCONB  = 0x09,
+  IOCONA   = 0x0A,
+  IOCONB   = 0x0B,
+  GPPUA    = 0x0C, // Pull-up resistor on pins in GPIO bank A. 0=disabled. 1=enabled.
+  GPPUB    = 0x0D,  // Pull-up resistor on pins in GPIO bank B. 0=disabled. 1=enabled.
+  INTFA    = 0x0E,
+  INTFB    = 0x0F,
+  INTCAPA  = 0x10,
+  INTCAPB  = 0x11,
+  GPIOA    = 0x12,
+  GPIOB    = 0x13,
+  OLATA    = 0x14,
+  OLATB    = 0x15
 };
 
 /*
  * How we identify pins across the API.
  */
-typedef byte MCP23017GpioPinId ;
+typedef enum MCP23017GpioPinId {
+GPIO_PIN_A0 = 0x00,
+GPIO_PIN_A1 = 0x01,
+GPIO_PIN_A2 = 0x02,
+GPIO_PIN_A3 = 0x03,
+GPIO_PIN_A4 = 0x04,
+GPIO_PIN_A5 = 0x05,
+GPIO_PIN_A6 = 0x06,
+GPIO_PIN_A7 = 0x07,
+GPIO_PIN_B0 = 0x08,
+GPIO_PIN_B1 = 0x09,
+GPIO_PIN_B2 = 0x0A,
+GPIO_PIN_B3 = 0x0B,
+GPIO_PIN_B4 = 0x0C,
+GPIO_PIN_B5 = 0x0D,
+GPIO_PIN_B6 = 0x0E,
+GPIO_PIN_B7 = 0x0F
+};
 
-#define MCP23017_GPIO_PIN_A0 0x00
-#define MCP23017_GPIO_PIN_A1 0x01
-#define MCP23017_GPIO_PIN_A2 0x02
-#define MCP23017_GPIO_PIN_A3 0x03
-#define MCP23017_GPIO_PIN_A4 0x04
-#define MCP23017_GPIO_PIN_A5 0x05
-#define MCP23017_GPIO_PIN_A6 0x06
-#define MCP23017_GPIO_PIN_A7 0x07
-#define MCP23017_GPIO_PIN_B0 0x08
-#define MCP23017_GPIO_PIN_B1 0x09
-#define MCP23017_GPIO_PIN_B2 0x0A
-#define MCP23017_GPIO_PIN_B3 0x0B
-#define MCP23017_GPIO_PIN_B4 0x0C
-#define MCP23017_GPIO_PIN_B5 0x0D
-#define MCP23017_GPIO_PIN_B6 0x0E
-#define MCP23017_GPIO_PIN_B7 0x0F
 
+// Forward reference so we can have circular cross-referencing.
+class MCP23017Controller ;
 
 class MCP23017Device {
   public:
     void setPin( MCP23017GpioPinId new_pin );
+    void setController( MCP23017Controller * controller );
+    MCP23017Controller * getController();
+    
     bool isOutputDevice();
     bool isInputDevice();
+    void setDeviceDirection(boolean is_output_device);
+    
     bool isPullUpResistorEnabled();
     bool setPullUpResistor( bool new_state );
+    
     bool isOutputHigh();
+    bool isStateLow(); 
+    void setState( boolean new_state );
+
+
   private:
     bool is_output_device = true;
     MCP23017GpioPinId pin ;
+    MCP23017Controller * controller;
     bool is_pullup_resistor_enabled = true ;
-    bool currentState = false;
+    bool current_state = false;
 };
 
 class MCP23017Controller {
@@ -108,19 +124,27 @@ class MCP23017Controller {
     void setup();
 
     // Attach a device to a pin.
-    void attachDevice( MCP23017Device device , MCP23017GpioPinId pin );
+    void attachDevice( MCP23017Device * device , MCP23017GpioPinId pin );
 
     // Make sure the outputs have transmitted their current in-memory state.
     void loop();
 
   private:
-    MCP23017Device device[MCP23017_MAX_GPIO_PINS];
+    // An array of pointers to devices.
+    MCP23017Device * device[MCP23017_MAX_GPIO_PINS];
+    
+    // The i2c address set by the jumpers.
     byte i2c_address ;
 
+    // Tell the board whether each pin is for input or output
     void transmitDevicePinDirection();
+    
+    // Tell the board whether an input pin needs a pull-up resistor.
     void transmitPullupResistorSettings();
+    
+    // Tell the board what the state of each output pin should be.
     void transmitOutputs();
-}
+};
 
 
 
